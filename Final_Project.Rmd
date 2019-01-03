@@ -1,8 +1,10 @@
 ---
 title: "Prediction Assignment"
 author: "Sebastian Castillo"
-date: "31 de agosto de 2018"
-output: html_document
+date: "2019-01-03"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -60,7 +62,7 @@ dim(test_set)
 
 ```
 
-The two datasets have a large number of NA values as well as near-zero-variance variables. Both will be removed .
+The two datasets have a large number of NA values as well as near-zero-variance variables, so they will be removed.
 
 ```{r}
 nzv_var <- nearZeroVar(train_set)
@@ -101,4 +103,81 @@ corrplot(corr_matrix, order = "FPC", method = "circle", type = "lower",
          tl.cex = 0.6, tl.col = rgb(0, 0, 0))
 ```
 
+# Fitting prediction models
 
+In this part three different models will be fitted to the trainingdata (and evaluated against the testdata).
+
+# Random Forest (RF)
+
+```{r}
+# Random Forest
+set.seed(131055)
+trControl <- trainControl(method = "cv", number = 5, verboseIter = FALSE)
+mod_rf <- train(classe ~ ., data = train_set, method = "rf", trControl = trControl)
+# mod_rf$finalModel; suppress: to much output
+predict_rf <- predict(mod_rf, newdata = test_set)
+confMat_rf <- confusionMatrix(predict_rf, test_set$classe)
+confMat_rf
+```
+
+## Plot RF
+
+```{r}
+plot(confMat_rf$table, main = paste("Random Forest Accuracy =", round(confMat_rf$overall["Accuracy"], 4)))
+```
+
+
+## Linear Discriminant Analysis (LDA)
+
+```{r}
+set.seed(131055)
+trControl <- trainControl(method = "cv", number = 5, verboseIter = FALSE)
+mod_lda <- train(classe ~ ., data = train_set, method = "lda", trControl = trControl)
+# mod_lda$finalModel; suppress: to much output
+predict_lda <- predict(mod_lda, newdata = test_set)
+confMat_lda <- confusionMatrix(predict_lda, test_set$classe)
+confMat_lda
+```
+
+## Plot LDA
+
+```{r}
+plot(confMat_lda$table, main = paste("Linear Discriminant Accuracy =", round(confMat_lda$overall["Accuracy"], 4)))
+```
+
+## K Nearest Neighbor (KNN)
+
+```{r}
+set.seed(131055)
+trControl <- trainControl(method = "cv", number = 5, verboseIter = FALSE)
+mod_knn <- train(classe ~ ., data = train_set, method = "knn", trControl = trControl)
+# mod_knn$finalModel; suppress: to much output
+predict_knn <- predict(mod_knn, newdata = test_set)
+confMat_knn <- confusionMatrix(predict_knn, test_set$classe)
+confMat_knn
+```
+
+Plot KNN
+
+```{r}
+plot(confMat_knn$table, main = paste("K Nearest Neighbor Accuracy =", round(confMat_knn$overall["Accuracy"], 4)))
+```
+
+## Final Prediction on the test set
+
+All models were trained with crossvalidation.   
+
+Sorted on performance to predict the test data, the ranking of the different models is as follows: 
+
+*1: `r round(confMat_rf$overall["Accuracy"], 4)` (Random Forest)  
+*2: `r round(confMat_knn$overall["Accuracy"], 4)` (KNN)  
+*3: `r round(confMat_lda$overall["Accuracy"], 4)` (LDA) 
+
+On accuracy, Random Forest is a clear winner. And it is clear from the corresponding plot that all categories of classe are more or less equally predicted.   
+
+So for the final prediction on the extra test-set the final Random Forest model is choosen.
+
+```{r}
+predict_final <- predict(mod_rf, newdata = test_set)
+predict_final
+```
